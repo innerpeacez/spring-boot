@@ -299,8 +299,8 @@ public class UndertowServletWebServerFactory extends AbstractServletWebServerFac
 		try {
 			createAccessLogDirectoryIfNecessary();
 			XnioWorker worker = createWorker();
-			String prefix = (this.accessLogPrefix != null ? this.accessLogPrefix
-					: "access_log.");
+			String prefix = (this.accessLogPrefix != null) ? this.accessLogPrefix
+					: "access_log.";
 			DefaultAccessLogReceiver accessLogReceiver = new DefaultAccessLogReceiver(
 					worker, this.accessLogDirectory, prefix, this.accessLogSuffix,
 					this.accessLogRotate);
@@ -319,8 +319,8 @@ public class UndertowServletWebServerFactory extends AbstractServletWebServerFac
 	private AccessLogHandler createAccessLogHandler(HttpHandler handler,
 			AccessLogReceiver accessLogReceiver) {
 		createAccessLogDirectoryIfNecessary();
-		String formatString = ((this.accessLogPattern != null) ? this.accessLogPattern
-				: "common");
+		String formatString = (this.accessLogPattern != null) ? this.accessLogPattern
+				: "common";
 		return new AccessLogHandler(handler, accessLogReceiver, formatString,
 				Undertow.class.getClassLoader());
 	}
@@ -348,7 +348,7 @@ public class UndertowServletWebServerFactory extends AbstractServletWebServerFac
 			DeploymentInfo deployment, ServletContextInitializer... initializers) {
 		ServletContextInitializer[] mergedInitializers = mergeInitializers(initializers);
 		Initializer initializer = new Initializer(mergedInitializers);
-		deployment.addServletContainerInitalizer(new ServletContainerInitializerInfo(
+		deployment.addServletContainerInitializer(new ServletContainerInitializerInfo(
 				Initializer.class,
 				new ImmediateInstanceFactory<ServletContainerInitializer>(initializer),
 				NO_CLASSES));
@@ -399,7 +399,7 @@ public class UndertowServletWebServerFactory extends AbstractServletWebServerFac
 
 	private File getCanonicalDocumentRoot(File docBase) {
 		try {
-			File root = (docBase != null ? docBase : createTempDir("undertow-docbase"));
+			File root = (docBase != null) ? docBase : createTempDir("undertow-docbase");
 			return root.getCanonicalFile();
 		}
 		catch (IOException ex) {

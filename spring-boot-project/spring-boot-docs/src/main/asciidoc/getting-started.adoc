@@ -39,8 +39,19 @@ configuration).
 [[getting-started-system-requirements]]
 == System Requirements
 Spring Boot {spring-boot-version} requires https://www.java.com[Java 8 or 9] and
-{spring-reference}[Spring Framework {spring-version}] or above. Explicit build support is
-provided for Maven 3.2+ and Gradle 4.
+{spring-reference}[Spring Framework {spring-framework-version}] or above.
+
+Explicit build support is provided for the following build tools:
+
+|===
+|Build Tool |Version
+
+|Maven
+|3.2+
+
+|Gradle
+|4.4+
+|===
 
 
 
@@ -51,14 +62,14 @@ Spring Boot supports the following embedded servlet containers:
 |===
 |Name |Servlet Version
 
-|Tomcat 8.5
-|3.1
+|Tomcat 9.0
+|4.0
 
 |Jetty 9.4
 |3.1
 
-|Undertow 1.4
-|3.1
+|Undertow 2.0
+|4.0
 |===
 
 You can also deploy Spring Boot applications to any Servlet 3.1+ compatible container.
@@ -188,8 +199,8 @@ scope.
 
 [[getting-started-gradle-installation]]
 ==== Gradle Installation
-Spring Boot is compatible with Gradle 4. If you do not already have Gradle installed, you
-can follow the instructions at https://gradle.org.
+Spring Boot is compatible with Gradle 4.4 and later. If you do not already have Gradle
+installed, you can follow the instructions at https://gradle.org.
 
 Spring Boot dependencies can be declared by using the `org.springframework.boot` `group`.
 Typically, your project declares dependencies to one or more
@@ -451,6 +462,26 @@ that provides detailed upgrade instructions. Check also the
 {github-wiki}["`release notes`"] for a list of "`new and noteworthy`" features for each
 release.
 
+When upgrading to a new feature release, some properties may have been renamed or removed.
+Spring Boot provides a way to analyze your application's environment and print diagnostics
+at startup, but also temporarily migrate properties at runtime for you. To enable that
+feature, add the following dependency to your project:
+
+[source,xml,indent=0]
+----
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-properties-migrator</artifactId>
+		<scope>runtime</scope>
+	</dependency>
+----
+
+WARNING: Properties that are added late to the environment, such as when using
+`@PropertySource`, will not be taken into account.
+
+NOTE: Once you're done with the migration, please make sure to remove this module from
+your project's dependencies.
+
 To upgrade an existing CLI installation, use the appropriate package manager command (for
 example, `brew upgrade`) or, if you manually installed the CLI, follow the
 <<getting-started-manual-cli-installation, standard instructions>>, remembering to update
@@ -473,7 +504,7 @@ problem, check there first.
 You can shortcut the steps below by going to https://start.spring.io and choosing the
 "Web" starter from the dependencies searcher. Doing so generates a new project structure
 so that you can <<getting-started-first-application-code,start coding right away>>. Check
-the https://github.com/spring-io/initializr[Spring Initializr documentation] for more
+the {spring-initializr-reference}/#user-guide[Spring Initializr documentation] for more
 details.
 ====
 

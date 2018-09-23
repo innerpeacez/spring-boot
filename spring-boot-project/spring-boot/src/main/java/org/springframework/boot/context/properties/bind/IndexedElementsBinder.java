@@ -57,7 +57,7 @@ abstract class IndexedElementsBinder<T> extends AggregateBinder<T> {
 
 	/**
 	 * Bind indexed elements to the supplied collection.
-	 * @param name The name of the property to bind
+	 * @param name the name of the property to bind
 	 * @param target the target bindable
 	 * @param elementBinder the binder to use for elements
 	 * @param aggregateType the aggregate type, may be a collection or an array
@@ -109,7 +109,7 @@ abstract class IndexedElementsBinder<T> extends AggregateBinder<T> {
 				source, root);
 		for (int i = 0; i < Integer.MAX_VALUE; i++) {
 			ConfigurationPropertyName name = root
-					.append(i != 0 ? "[" + i + "]" : INDEX_ZERO);
+					.append((i != 0) ? "[" + i + "]" : INDEX_ZERO);
 			Object value = elementBinder.bind(name, Bindable.of(elementType), source);
 			if (value == null) {
 				break;
@@ -128,9 +128,10 @@ abstract class IndexedElementsBinder<T> extends AggregateBinder<T> {
 		}
 		for (ConfigurationPropertyName name : (IterableConfigurationPropertySource) source
 				.filter(root::isAncestorOf)) {
-			name = name.chop(root.getNumberOfElements() + 1);
-			if (name.isLastElementIndexed()) {
-				String key = name.getLastElement(Form.UNIFORM);
+			ConfigurationPropertyName choppedName = name
+					.chop(root.getNumberOfElements() + 1);
+			if (choppedName.isLastElementIndexed()) {
+				String key = choppedName.getLastElement(Form.UNIFORM);
 				ConfigurationProperty value = source.getConfigurationProperty(name);
 				children.add(key, value);
 			}

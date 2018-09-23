@@ -18,7 +18,6 @@ package org.springframework.boot.autoconfigure.web.reactive;
 
 import java.time.Duration;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -41,11 +40,11 @@ import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.format.WebConversionService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.codec.CodecCustomizer;
+import org.springframework.boot.web.reactive.filter.OrderedHiddenHttpMethodFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.GenericConverter;
 import org.springframework.format.Formatter;
@@ -55,6 +54,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.util.ClassUtils;
 import org.springframework.validation.Validator;
+import org.springframework.web.filter.reactive.HiddenHttpMethodFilter;
 import org.springframework.web.reactive.config.DelegatingWebFluxConfiguration;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.config.ResourceChainRegistration;
@@ -69,6 +69,8 @@ import org.springframework.web.reactive.resource.ResourceResolver;
 import org.springframework.web.reactive.resource.VersionResourceResolver;
 import org.springframework.web.reactive.result.method.HandlerMethodArgumentResolver;
 import org.springframework.web.reactive.result.method.annotation.ArgumentResolverConfigurer;
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.reactive.result.view.ViewResolver;
 
 /**
@@ -80,6 +82,7 @@ import org.springframework.web.reactive.result.view.ViewResolver;
  * @author Andy Wilkinson
  * @author Phillip Webb
  * @author Eddú Meléndez
+ * @author Artsiom Yudovin
  * @since 2.0.0
  */
 @Configuration
@@ -90,6 +93,12 @@ import org.springframework.web.reactive.result.view.ViewResolver;
 		CodecsAutoConfiguration.class, ValidationAutoConfiguration.class })
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE + 10)
 public class WebFluxAutoConfiguration {
+
+	@Bean
+	@ConditionalOnMissingBean(HiddenHttpMethodFilter.class)
+	public OrderedHiddenHttpMethodFilter hiddenHttpMethodFilter() {
+		return new OrderedHiddenHttpMethodFilter();
+	}
 
 	@Configuration
 	@EnableConfigurationProperties({ ResourceProperties.class, WebFluxProperties.class })
@@ -104,43 +113,39 @@ public class WebFluxAutoConfiguration {
 
 		private final ListableBeanFactory beanFactory;
 
-		private final List<HandlerMethodArgumentResolver> argumentResolvers;
+		private final ObjectProvider<HandlerMethodArgumentResolver> argumentResolvers;
 
-		private final List<CodecCustomizer> codecCustomizers;
+		private final ObjectProvider<CodecCustomizer> codecCustomizers;
 
 		private final ResourceHandlerRegistrationCustomizer resourceHandlerRegistrationCustomizer;
 
-		private final List<ViewResolver> viewResolvers;
+		private final ObjectProvider<ViewResolver> viewResolvers;
 
 		public WebFluxConfig(ResourceProperties resourceProperties,
 				WebFluxProperties webFluxProperties, ListableBeanFactory beanFactory,
-				ObjectProvider<List<HandlerMethodArgumentResolver>> resolvers,
-				ObjectProvider<List<CodecCustomizer>> codecCustomizers,
+				ObjectProvider<HandlerMethodArgumentResolver> resolvers,
+				ObjectProvider<CodecCustomizer> codecCustomizers,
 				ObjectProvider<ResourceHandlerRegistrationCustomizer> resourceHandlerRegistrationCustomizer,
-				ObjectProvider<List<ViewResolver>> viewResolvers) {
+				ObjectProvider<ViewResolver> viewResolvers) {
 			this.resourceProperties = resourceProperties;
 			this.webFluxProperties = webFluxProperties;
 			this.beanFactory = beanFactory;
-			this.argumentResolvers = resolvers.getIfAvailable();
-			this.codecCustomizers = codecCustomizers.getIfAvailable();
+			this.argumentResolvers = resolvers;
+			this.codecCustomizers = codecCustomizers;
 			this.resourceHandlerRegistrationCustomizer = resourceHandlerRegistrationCustomizer
 					.getIfAvailable();
-			this.viewResolvers = viewResolvers.getIfAvailable();
+			this.viewResolvers = viewResolvers;
 		}
 
 		@Override
 		public void configureArgumentResolvers(ArgumentResolverConfigurer configurer) {
-			if (this.argumentResolvers != null) {
-				this.argumentResolvers.forEach(configurer::addCustomResolver);
-			}
+			this.argumentResolvers.orderedStream().forEach(configurer::addCustomResolver);
 		}
 
 		@Override
 		public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
-			if (this.codecCustomizers != null) {
-				this.codecCustomizers
-						.forEach((customizer) -> customizer.customize(configurer));
-			}
+			this.codecCustomizers.orderedStream()
+					.forEach((customizer) -> customizer.customize(configurer));
 		}
 
 		@Override
@@ -175,10 +180,7 @@ public class WebFluxAutoConfiguration {
 
 		@Override
 		public void configureViewResolvers(ViewResolverRegistry registry) {
-			if (this.viewResolvers != null) {
-				AnnotationAwareOrderComparator.sort(this.viewResolvers);
-				this.viewResolvers.forEach(registry::viewResolver);
-			}
+			this.viewResolvers.orderedStream().forEach(registry::viewResolver);
 		}
 
 		@Override
@@ -217,8 +219,12 @@ public class WebFluxAutoConfiguration {
 
 		private final WebFluxProperties webFluxProperties;
 
-		public EnableWebFluxConfiguration(WebFluxProperties webFluxProperties) {
+		private final WebFluxRegistrations webFluxRegistrations;
+
+		public EnableWebFluxConfiguration(WebFluxProperties webFluxProperties,
+				ObjectProvider<WebFluxRegistrations> webFluxRegistrations) {
 			this.webFluxProperties = webFluxProperties;
+			this.webFluxRegistrations = webFluxRegistrations.getIfUnique();
 		}
 
 		@Bean
@@ -240,6 +246,24 @@ public class WebFluxAutoConfiguration {
 			return ValidatorAdapter.get(getApplicationContext(), getValidator());
 		}
 
+		@Override
+		protected RequestMappingHandlerAdapter createRequestMappingHandlerAdapter() {
+			if (this.webFluxRegistrations != null && this.webFluxRegistrations
+					.getRequestMappingHandlerAdapter() != null) {
+				return this.webFluxRegistrations.getRequestMappingHandlerAdapter();
+			}
+			return super.createRequestMappingHandlerAdapter();
+		}
+
+		@Override
+		protected RequestMappingHandlerMapping createRequestMappingHandlerMapping() {
+			if (this.webFluxRegistrations != null && this.webFluxRegistrations
+					.getRequestMappingHandlerMapping() != null) {
+				return this.webFluxRegistrations.getRequestMappingHandlerMapping();
+			}
+			return super.createRequestMappingHandlerMapping();
+		}
+
 	}
 
 	@Configuration
@@ -259,7 +283,7 @@ public class WebFluxAutoConfiguration {
 
 	}
 
-	private static class ResourceChainResourceHandlerRegistrationCustomizer
+	static class ResourceChainResourceHandlerRegistrationCustomizer
 			implements ResourceHandlerRegistrationCustomizer {
 
 		@Autowired

@@ -19,7 +19,6 @@ package org.springframework.boot.web.embedded.netty;
 import java.net.URL;
 import java.security.KeyStore;
 import java.util.Arrays;
-import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -27,7 +26,9 @@ import javax.net.ssl.TrustManagerFactory;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.tcp.SslProvider;
 
+import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.util.ResourceUtils;
@@ -42,42 +43,49 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 
 	private final Ssl ssl;
 
+	private final Http2 http2;
+
 	private final SslStoreProvider sslStoreProvider;
 
-	public SslServerCustomizer(Ssl ssl, SslStoreProvider sslStoreProvider) {
+	public SslServerCustomizer(Ssl ssl, Http2 http2, SslStoreProvider sslStoreProvider) {
 		this.ssl = ssl;
+		this.http2 = http2;
 		this.sslStoreProvider = sslStoreProvider;
 	}
 
 	@Override
 	public HttpServer apply(HttpServer server) {
 		try {
-			return server.secure((contextSpec) -> contextSpec.forServer()
-					.sslContext(getContextBuilderConsumer()));
+			return server.secure((contextSpec) -> {
+				SslProvider.DefaultConfigurationSpec spec = contextSpec
+						.sslContext(getContextBuilder());
+				if (this.http2 != null && this.http2.isEnabled()) {
+					spec.defaultConfiguration(SslProvider.DefaultConfigurationType.H2);
+				}
+			});
 		}
 		catch (Exception ex) {
 			throw new IllegalStateException(ex);
 		}
 	}
 
-	protected Consumer<SslContextBuilder> getContextBuilderConsumer() {
-		return (builder) -> {
-			builder.keyManager(getKeyManagerFactory(this.ssl, this.sslStoreProvider))
-					.trustManager(
-							getTrustManagerFactory(this.ssl, this.sslStoreProvider));
-			if (this.ssl.getEnabledProtocols() != null) {
-				builder.protocols(this.ssl.getEnabledProtocols());
-			}
-			if (this.ssl.getCiphers() != null) {
-				builder.ciphers(Arrays.asList(this.ssl.getCiphers()));
-			}
-			if (this.ssl.getClientAuth() == Ssl.ClientAuth.NEED) {
-				builder.clientAuth(ClientAuth.REQUIRE);
-			}
-			else if (this.ssl.getClientAuth() == Ssl.ClientAuth.WANT) {
-				builder.clientAuth(ClientAuth.OPTIONAL);
-			}
-		};
+	protected SslContextBuilder getContextBuilder() {
+		SslContextBuilder builder = SslContextBuilder
+				.forServer(getKeyManagerFactory(this.ssl, this.sslStoreProvider))
+				.trustManager(getTrustManagerFactory(this.ssl, this.sslStoreProvider));
+		if (this.ssl.getEnabledProtocols() != null) {
+			builder.protocols(this.ssl.getEnabledProtocols());
+		}
+		if (this.ssl.getCiphers() != null) {
+			builder.ciphers(Arrays.asList(this.ssl.getCiphers()));
+		}
+		if (this.ssl.getClientAuth() == Ssl.ClientAuth.NEED) {
+			builder.clientAuth(ClientAuth.REQUIRE);
+		}
+		else if (this.ssl.getClientAuth() == Ssl.ClientAuth.WANT) {
+			builder.clientAuth(ClientAuth.OPTIONAL);
+		}
+		return builder;
 	}
 
 	protected KeyManagerFactory getKeyManagerFactory(Ssl ssl,
@@ -86,8 +94,8 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 			KeyStore keyStore = getKeyStore(ssl, sslStoreProvider);
 			KeyManagerFactory keyManagerFactory = KeyManagerFactory
 					.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-			char[] keyPassword = (ssl.getKeyPassword() != null
-					? ssl.getKeyPassword().toCharArray() : null);
+			char[] keyPassword = (ssl.getKeyPassword() != null)
+					? ssl.getKeyPassword().toCharArray() : null;
 			if (keyPassword == null && ssl.getKeyStorePassword() != null) {
 				keyPassword = ssl.getKeyStorePassword().toCharArray();
 			}
@@ -133,13 +141,13 @@ public class SslServerCustomizer implements NettyServerCustomizer {
 
 	private KeyStore loadKeyStore(String type, String resource, String password)
 			throws Exception {
-		type = (type != null ? type : "JKS");
+		type = (type != null) ? type : "JKS";
 		if (resource == null) {
 			return null;
 		}
 		KeyStore store = KeyStore.getInstance(type);
 		URL url = ResourceUtils.getURL(resource);
-		store.load(url.openStream(), password != null ? password.toCharArray() : null);
+		store.load(url.openStream(), (password != null) ? password.toCharArray() : null);
 		return store;
 	}
 

@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 
 import org.springframework.boot.web.reactive.server.AbstractReactiveWebServerFactory;
@@ -102,6 +103,7 @@ public class NettyReactiveWebServerFactory extends AbstractReactiveWebServerFact
 	/**
 	 * Set if x-forward-* headers should be processed.
 	 * @param useForwardHeaders if x-forward headers should be used
+	 * @since 2.1.0
 	 */
 	public void setUseForwardHeaders(boolean useForwardHeaders) {
 		this.useForwardHeaders = useForwardHeaders;
@@ -109,10 +111,10 @@ public class NettyReactiveWebServerFactory extends AbstractReactiveWebServerFact
 
 	private HttpServer createHttpServer() {
 		HttpServer server = HttpServer.create().tcpConfiguration(
-				(tcpServer) -> tcpServer.addressSupplier(() -> getListenAddress()));
+				(tcpServer) -> tcpServer.addressSupplier(this::getListenAddress));
 		if (getSsl() != null && getSsl().isEnabled()) {
 			SslServerCustomizer sslServerCustomizer = new SslServerCustomizer(getSsl(),
-					getSslStoreProvider());
+					getHttp2(), getSslStoreProvider());
 			server = sslServerCustomizer.apply(server);
 		}
 		if (getCompression() != null && getCompression().getEnabled()) {
@@ -120,8 +122,21 @@ public class NettyReactiveWebServerFactory extends AbstractReactiveWebServerFact
 					getCompression());
 			server = compressionCustomizer.apply(server);
 		}
-		server = (this.useForwardHeaders ? server.forwarded() : server.noForwarded());
+		server = server.protocol(listProtocols());
+		server = server.forwarded(this.useForwardHeaders);
 		return applyCustomizers(server);
+	}
+
+	private HttpProtocol[] listProtocols() {
+		if (getHttp2() != null && getHttp2().isEnabled()) {
+			if (getSsl() != null && getSsl().isEnabled()) {
+				return new HttpProtocol[] { HttpProtocol.H2, HttpProtocol.HTTP11 };
+			}
+			else {
+				return new HttpProtocol[] { HttpProtocol.H2C, HttpProtocol.HTTP11 };
+			}
+		}
+		return new HttpProtocol[] { HttpProtocol.HTTP11 };
 	}
 
 	private InetSocketAddress getListenAddress() {

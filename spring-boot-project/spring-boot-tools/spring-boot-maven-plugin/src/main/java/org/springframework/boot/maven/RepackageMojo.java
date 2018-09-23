@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
@@ -61,6 +62,8 @@ import org.springframework.boot.loader.tools.Repackager.MainClassTimeoutWarningL
  */
 @Mojo(name = "repackage", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME, requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class RepackageMojo extends AbstractDependencyFilterMojo {
+
+	private static final Pattern WHITE_SPACE_PATTERN = Pattern.compile("\\s+");
 
 	/**
 	 * The Maven project.
@@ -236,7 +239,7 @@ public class RepackageMojo extends AbstractDependencyFilterMojo {
 	 */
 	private Artifact getSourceArtifact() {
 		Artifact sourceArtifact = getArtifact(this.classifier);
-		return (sourceArtifact != null ? sourceArtifact : this.project.getArtifact());
+		return (sourceArtifact != null) ? sourceArtifact : this.project.getArtifact();
 	}
 
 	private Artifact getArtifact(String classifier) {
@@ -251,7 +254,7 @@ public class RepackageMojo extends AbstractDependencyFilterMojo {
 	}
 
 	private File getTargetFile() {
-		String classifier = (this.classifier != null ? this.classifier.trim() : "");
+		String classifier = (this.classifier != null) ? this.classifier.trim() : "";
 		if (!classifier.isEmpty() && !classifier.startsWith("-")) {
 			classifier = "-" + classifier;
 		}
@@ -312,7 +315,8 @@ public class RepackageMojo extends AbstractDependencyFilterMojo {
 	}
 
 	private String removeLineBreaks(String description) {
-		return (description != null ? description.replaceAll("\\s+", " ") : null);
+		return (description != null)
+				? WHITE_SPACE_PATTERN.matcher(description).replaceAll(" ") : null;
 	}
 
 	private void putIfMissing(Properties properties, String key,
@@ -345,8 +349,8 @@ public class RepackageMojo extends AbstractDependencyFilterMojo {
 					this.classifier, target);
 		}
 		else {
-			String artifactId = (this.classifier != null
-					? "artifact with classifier " + this.classifier : "main artifact");
+			String artifactId = (this.classifier != null)
+					? "artifact with classifier " + this.classifier : "main artifact";
 			getLog().info(String.format("Replacing %s %s", artifactId, source.getFile()));
 			source.setFile(target);
 		}

@@ -23,7 +23,7 @@ import org.junit.Test;
 
 import org.springframework.boot.actuate.endpoint.web.ServletEndpointRegistrar;
 import org.springframework.boot.actuate.endpoint.web.annotation.ServletEndpointsSupplier;
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPathProvider;
+import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPath;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -90,7 +90,7 @@ public class ServletEndpointManagementContextConfigurationTests {
 		}
 
 		@Bean
-		public DispatcherServletPathProvider servletPathProvider() {
+		public DispatcherServletPath dispatcherServletPath() {
 			return () -> "/test";
 		}
 

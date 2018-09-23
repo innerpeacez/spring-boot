@@ -30,7 +30,6 @@ import org.springframework.boot.context.properties.source.ConfigurationPropertyS
 import org.springframework.boot.context.properties.source.IterableConfigurationPropertySource;
 import org.springframework.core.CollectionFactory;
 import org.springframework.core.ResolvableType;
-import org.springframework.util.ClassUtils;
 
 /**
  * {@link AggregateBinder} for Maps.
@@ -55,8 +54,8 @@ class MapBinder extends AggregateBinder<Map<Object, Object>> {
 	@Override
 	protected Object bindAggregate(ConfigurationPropertyName name, Bindable<?> target,
 			AggregateElementBinder elementBinder) {
-		Map<Object, Object> map = CollectionFactory.createMap((target.getValue() != null
-				? Map.class : target.getType().resolve(Object.class)), 0);
+		Map<Object, Object> map = CollectionFactory.createMap((target.getValue() != null)
+				? Map.class : target.getType().resolve(Object.class), 0);
 		Bindable<?> resolvedTarget = resolveTarget(target);
 		boolean hasDescendants = getContext().streamSources().anyMatch((source) -> source
 				.containsDescendantOf(name) == ConfigurationPropertyState.PRESENT);
@@ -71,7 +70,7 @@ class MapBinder extends AggregateBinder<Map<Object, Object>> {
 			}
 			new EntryBinder(name, resolvedTarget, elementBinder).bindEntries(source, map);
 		}
-		return (map.isEmpty() ? null : map);
+		return map.isEmpty() ? null : map;
 	}
 
 	private Bindable<?> resolveTarget(Bindable<?> target) {
@@ -199,8 +198,7 @@ class MapBinder extends AggregateBinder<Map<Object, Object>> {
 		private boolean isScalarValue(ConfigurationPropertySource source,
 				ConfigurationPropertyName name) {
 			Class<?> resolved = this.valueType.resolve(Object.class);
-			String packageName = ClassUtils.getPackageName(resolved);
-			if (!packageName.startsWith("java.lang") && !resolved.isEnum()) {
+			if (!resolved.getName().startsWith("java.lang") && !resolved.isEnum()) {
 				return false;
 			}
 			ConfigurationProperty property = source.getConfigurationProperty(name);
@@ -216,7 +214,9 @@ class MapBinder extends AggregateBinder<Map<Object, Object>> {
 			StringBuilder result = new StringBuilder();
 			for (int i = this.root.getNumberOfElements(); i < name
 					.getNumberOfElements(); i++) {
-				result.append(result.length() != 0 ? "." : "");
+				if (result.length() != 0) {
+					result.append('.');
+				}
 				result.append(name.getElement(i, Form.ORIGINAL));
 			}
 			return result.toString();

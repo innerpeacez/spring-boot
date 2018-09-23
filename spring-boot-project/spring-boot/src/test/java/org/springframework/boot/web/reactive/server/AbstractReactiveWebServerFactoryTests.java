@@ -31,6 +31,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.After;
@@ -57,6 +58,7 @@ import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.SocketUtils;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -135,10 +137,11 @@ public abstract class AbstractReactiveWebServerFactoryTests {
 	}
 
 	protected ReactorClientHttpConnector buildTrustAllSslConnector() {
+		SslContextBuilder builder = SslContextBuilder.forClient()
+				.sslProvider(SslProvider.JDK)
+				.trustManager(InsecureTrustManagerFactory.INSTANCE);
 		HttpClient client = HttpClient.create().wiretap()
-				.secure((sslContextSpec) -> sslContextSpec.forClient()
-						.sslContext((builder) -> builder.sslProvider(SslProvider.JDK)
-								.trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				.secure((sslContextSpec) -> sslContextSpec.sslContext(builder));
 		return new ReactorClientHttpConnector(client);
 	}
 
@@ -171,11 +174,12 @@ public abstract class AbstractReactiveWebServerFactoryTests {
 		KeyManagerFactory clientKeyManagerFactory = KeyManagerFactory
 				.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 		clientKeyManagerFactory.init(clientKeyStore, "password".toCharArray());
+		SslContextBuilder builder = SslContextBuilder.forClient()
+				.sslProvider(SslProvider.JDK)
+				.trustManager(InsecureTrustManagerFactory.INSTANCE)
+				.keyManager(clientKeyManagerFactory);
 		HttpClient client = HttpClient.create().wiretap()
-				.secure((sslContextSpec) -> sslContextSpec.forClient()
-						.sslContext((builder) -> builder.sslProvider(SslProvider.JDK)
-								.trustManager(InsecureTrustManagerFactory.INSTANCE)
-								.keyManager(clientKeyManagerFactory)));
+				.secure((sslContextSpec) -> sslContextSpec.sslContext(builder));
 		return new ReactorClientHttpConnector(client);
 	}
 
@@ -262,7 +266,7 @@ public abstract class AbstractReactiveWebServerFactoryTests {
 	public void noCompressionForSmallResponse() {
 		Compression compression = new Compression();
 		compression.setEnabled(true);
-		compression.setMinResponseSize(3001);
+		compression.setMinResponseSize(DataSize.ofBytes(3001));
 		WebClient client = prepareCompressionTest(compression);
 		ResponseEntity<Void> response = client.get().exchange()
 				.flatMap((res) -> res.toEntity(Void.class)).block();
@@ -304,7 +308,7 @@ public abstract class AbstractReactiveWebServerFactoryTests {
 				.getWebServer(new CharsHandler(3000, MediaType.TEXT_PLAIN));
 		this.webServer.start();
 
-		HttpClient client = HttpClient.create().wiretap().compress().tcpConfiguration(
+		HttpClient client = HttpClient.create().wiretap().compress(true).tcpConfiguration(
 				(tcpClient) -> tcpClient.doOnConnected((connection) -> connection
 						.channel().pipeline().addBefore(NettyPipeline.HttpDecompressor,
 								"CompressionTest", new CompressionDetectionHandler())));
