@@ -69,7 +69,7 @@ public class ResourceProperties {
 		String[] normalized = new String[staticLocations.length];
 		for (int i = 0; i < staticLocations.length; i++) {
 			String location = staticLocations[i];
-			normalized[i] = (location.endsWith("/") ? location : location + "/");
+			normalized[i] = location.endsWith("/") ? location : location + "/";
 		}
 		return normalized;
 	}
@@ -112,8 +112,8 @@ public class ResourceProperties {
 		private boolean htmlApplicationCache = false;
 
 		/**
-		 * Whether to enable resolution of already compressed resources. Checks for a
-		 * resource name with the '.gz' or '.br' file extensions.
+		 * Whether to enable resolution of already compressed resources (gzip, brotli).
+		 * Checks for a resource name with the '.gz' or '.br' file extensions.
 		 */
 		private boolean compressed = false;
 
@@ -164,7 +164,7 @@ public class ResourceProperties {
 
 		static Boolean getEnabled(boolean fixedEnabled, boolean contentEnabled,
 				Boolean chainEnabled) {
-			return (fixedEnabled || contentEnabled ? Boolean.TRUE : chainEnabled);
+			return (fixedEnabled || contentEnabled) ? Boolean.TRUE : chainEnabled;
 		}
 
 	}

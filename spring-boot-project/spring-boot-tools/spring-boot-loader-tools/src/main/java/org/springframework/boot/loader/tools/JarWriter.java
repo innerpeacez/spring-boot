@@ -134,7 +134,7 @@ public class JarWriter implements LoaderClassesWriter, AutoCloseable {
 		Enumeration<JarEntry> entries = jarFile.entries();
 		while (entries.hasMoreElements()) {
 			JarArchiveEntry entry = new JarArchiveEntry(entries.nextElement());
-			setUpStoredEntryIfNecessary(jarFile, entry);
+			setUpEntry(jarFile, entry);
 			try (ZipHeaderPeekInputStream inputStream = new ZipHeaderPeekInputStream(
 					jarFile.getInputStream(entry))) {
 				EntryWriter entryWriter = new InputStreamEntryWriter(inputStream, true);
@@ -146,20 +146,22 @@ public class JarWriter implements LoaderClassesWriter, AutoCloseable {
 		}
 	}
 
-	private void setUpStoredEntryIfNecessary(JarFile jarFile, JarArchiveEntry entry)
-			throws IOException {
+	private void setUpEntry(JarFile jarFile, JarArchiveEntry entry) throws IOException {
 		try (ZipHeaderPeekInputStream inputStream = new ZipHeaderPeekInputStream(
 				jarFile.getInputStream(entry))) {
 			if (inputStream.hasZipHeader() && entry.getMethod() != ZipEntry.STORED) {
 				new CrcAndSize(inputStream).setupStoredEntry(entry);
+			}
+			else {
+				entry.setCompressedSize(-1);
 			}
 		}
 	}
 
 	/**
 	 * Writes an entry. The {@code inputStream} is closed once the entry has been written
-	 * @param entryName The name of the entry
-	 * @param inputStream The stream from which the entry's data can be read
+	 * @param entryName the name of the entry
+	 * @param inputStream the stream from which the entry's data can be read
 	 * @throws IOException if the write fails
 	 */
 	@Override
@@ -361,7 +363,7 @@ public class JarWriter implements LoaderClassesWriter, AutoCloseable {
 
 		@Override
 		public int read() throws IOException {
-			int read = (this.headerStream != null ? this.headerStream.read() : -1);
+			int read = (this.headerStream != null) ? this.headerStream.read() : -1;
 			if (read != -1) {
 				this.position++;
 				if (this.position >= this.headerLength) {
@@ -379,8 +381,8 @@ public class JarWriter implements LoaderClassesWriter, AutoCloseable {
 
 		@Override
 		public int read(byte[] b, int off, int len) throws IOException {
-			int read = (this.headerStream != null ? this.headerStream.read(b, off, len)
-					: -1);
+			int read = (this.headerStream != null) ? this.headerStream.read(b, off, len)
+					: -1;
 			if (read <= 0) {
 				return readRemainder(b, off, len);
 			}

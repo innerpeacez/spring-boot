@@ -19,7 +19,7 @@ package org.springframework.boot.actuate.web.trace.servlet;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,17 +60,14 @@ final class TraceableHttpServletRequest implements TraceableRequest {
 			return new URI(urlBuffer.toString());
 		}
 		catch (URISyntaxException ex) {
-			String encoded = UriUtils.encode(queryString, StandardCharsets.UTF_8);
+			String encoded = UriUtils.encodeQuery(queryString, StandardCharsets.UTF_8);
 			StringBuffer urlBuffer = appendQueryString(encoded);
 			return URI.create(urlBuffer.toString());
 		}
 	}
 
 	private StringBuffer appendQueryString(String queryString) {
-		StringBuffer urlBuffer = this.request.getRequestURL();
-		urlBuffer.append("?");
-		urlBuffer.append(queryString);
-		return urlBuffer;
+		return this.request.getRequestURL().append("?").append(queryString);
 	}
 
 	@Override
@@ -88,17 +85,9 @@ final class TraceableHttpServletRequest implements TraceableRequest {
 		Enumeration<String> names = this.request.getHeaderNames();
 		while (names.hasMoreElements()) {
 			String name = names.nextElement();
-			headers.put(name, toList(this.request.getHeaders(name)));
+			headers.put(name, Collections.list(this.request.getHeaders(name)));
 		}
 		return headers;
-	}
-
-	private List<String> toList(Enumeration<String> enumeration) {
-		List<String> list = new ArrayList<>();
-		while (enumeration.hasMoreElements()) {
-			list.add(enumeration.nextElement());
-		}
-		return list;
 	}
 
 }

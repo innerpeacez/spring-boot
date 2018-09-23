@@ -17,17 +17,19 @@
 package org.springframework.boot.autoconfigure.jms.activemq;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.jms.ConnectionFactory;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.jms.pool.PooledConnectionFactory;
 import org.apache.commons.pool2.PooledObject;
+import org.messaginghub.pooled.jms.JmsPoolConnectionFactory;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jms.JmsPoolConnectionFactoryFactory;
 import org.springframework.boot.autoconfigure.jms.JmsProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -60,11 +62,11 @@ class ActiveMQConnectionFactoryConfiguration {
 
 		SimpleConnectionFactoryConfiguration(JmsProperties jmsProperties,
 				ActiveMQProperties properties,
-				ObjectProvider<List<ActiveMQConnectionFactoryCustomizer>> connectionFactoryCustomizers) {
+				ObjectProvider<ActiveMQConnectionFactoryCustomizer> connectionFactoryCustomizers) {
 			this.jmsProperties = jmsProperties;
 			this.properties = properties;
 			this.connectionFactoryCustomizers = connectionFactoryCustomizers
-					.getIfAvailable();
+					.orderedStream().collect(Collectors.toList());
 		}
 
 		@Bean
@@ -94,20 +96,20 @@ class ActiveMQConnectionFactoryConfiguration {
 	}
 
 	@Configuration
-	@ConditionalOnClass({ PooledConnectionFactory.class, PooledObject.class })
+	@ConditionalOnClass({ JmsPoolConnectionFactory.class, PooledObject.class })
 	static class PooledConnectionFactoryConfiguration {
 
 		@Bean(destroyMethod = "stop")
 		@ConditionalOnProperty(prefix = "spring.activemq.pool", name = "enabled", havingValue = "true", matchIfMissing = false)
-		public PooledConnectionFactory pooledJmsConnectionFactory(
+		public JmsPoolConnectionFactory pooledJmsConnectionFactory(
 				ActiveMQProperties properties,
-				ObjectProvider<List<ActiveMQConnectionFactoryCustomizer>> factoryCustomizers) {
+				ObjectProvider<ActiveMQConnectionFactoryCustomizer> factoryCustomizers) {
 			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactoryFactory(
-					properties, factoryCustomizers.getIfAvailable())
+					properties,
+					factoryCustomizers.orderedStream().collect(Collectors.toList()))
 							.createConnectionFactory(ActiveMQConnectionFactory.class);
-			return new PooledConnectionFactoryFactory(properties.getPool())
+			return new JmsPoolConnectionFactoryFactory(properties.getPool())
 					.createPooledConnectionFactory(connectionFactory);
-
 		}
 
 	}
