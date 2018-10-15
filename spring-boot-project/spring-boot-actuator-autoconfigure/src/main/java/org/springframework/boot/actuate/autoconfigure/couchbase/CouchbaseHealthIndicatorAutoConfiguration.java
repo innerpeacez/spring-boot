@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.boot.actuate.autoconfigure.couchbase;
 
 import java.util.Map;
@@ -31,6 +30,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.couchbase.CouchbaseAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.couchbase.CouchbaseDataAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -43,14 +43,16 @@ import org.springframework.data.couchbase.core.CouchbaseOperations;
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
- * @since 2.0.0
+ * @since 2.1.0
  */
 @Configuration
-@ConditionalOnClass({ CouchbaseOperations.class, Bucket.class })
+@ConditionalOnClass({ Bucket.class, CouchbaseOperations.class })
 @ConditionalOnBean(CouchbaseOperations.class)
 @ConditionalOnEnabledHealthIndicator("couchbase")
 @AutoConfigureBefore(HealthIndicatorAutoConfiguration.class)
-@AutoConfigureAfter(CouchbaseDataAutoConfiguration.class)
+@AutoConfigureAfter({ CouchbaseAutoConfiguration.class,
+		CouchbaseDataAutoConfiguration.class,
+		CouchbaseReactiveHealthIndicatorAutoConfiguration.class })
 @EnableConfigurationProperties(CouchbaseHealthIndicatorProperties.class)
 public class CouchbaseHealthIndicatorAutoConfiguration extends
 		CompositeHealthIndicatorConfiguration<CouchbaseHealthIndicator, CouchbaseOperations> {

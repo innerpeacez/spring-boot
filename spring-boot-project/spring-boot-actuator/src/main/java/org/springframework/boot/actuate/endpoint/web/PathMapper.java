@@ -16,6 +16,8 @@
 
 package org.springframework.boot.actuate.endpoint.web;
 
+import org.springframework.boot.actuate.endpoint.EndpointId;
+
 /**
  * Strategy interface used to provide a mapping between an endpoint ID and the root path
  * where it will be exposed.
@@ -32,14 +34,15 @@ public interface PathMapper {
 	 * @param endpointId the id of an endpoint
 	 * @return the path of the endpoint
 	 */
-	String getRootPath(String endpointId);
+	String getRootPath(EndpointId endpointId);
 
 	/**
 	 * Returns an {@link PathMapper} that uses the endpoint ID as the path.
-	 * @return an {@link PathMapper} that uses the endpoint ID as the path
+	 * @return an {@link PathMapper} that uses the lowercase endpoint ID as the path
 	 */
 	static PathMapper useEndpointId() {
-		return (endpointId) -> endpointId;
+		return (id) -> id.toLowerCaseString();
+
 	}
 
 }

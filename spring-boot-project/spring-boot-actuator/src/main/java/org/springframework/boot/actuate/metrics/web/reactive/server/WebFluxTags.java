@@ -21,6 +21,7 @@ import io.micrometer.core.instrument.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.HandlerMapping;
+import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.pattern.PathPattern;
 
@@ -86,7 +87,9 @@ public final class WebFluxTags {
 
 	/**
 	 * Creates a {@code uri} tag based on the URI of the given {@code exchange}. Uses the
-	 * {@link HandlerMapping#BEST_MATCHING_PATTERN_ATTRIBUTE} best matching pattern.
+	 * {@link HandlerMapping#BEST_MATCHING_PATTERN_ATTRIBUTE} best matching pattern from
+	 * WebFlux annotation or {@link RouterFunctions#MATCHING_PATTERN_ATTRIBUTE} from
+	 * WebFlux Fn.
 	 * @param exchange the exchange
 	 * @return the uri tag derived from the exchange
 	 */
@@ -95,6 +98,11 @@ public final class WebFluxTags {
 				.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
 		if (pathPattern != null) {
 			return Tag.of("uri", pathPattern.getPatternString());
+		}
+		String matchingPattern = exchange
+				.getAttribute(RouterFunctions.MATCHING_PATTERN_ATTRIBUTE);
+		if (matchingPattern != null) {
+			return Tag.of("uri", matchingPattern);
 		}
 		HttpStatus status = exchange.getResponse().getStatusCode();
 		if (status != null) {
@@ -128,10 +136,11 @@ public final class WebFluxTags {
 	}
 
 	/**
-	 * Creates a {@code outcome} tag based on the response status of the given
+	 * Creates an {@code outcome} tag based on the response status of the given
 	 * {@code exchange}.
 	 * @param exchange the exchange
 	 * @return the outcome tag derived from the response status
+	 * @since 2.1.0
 	 */
 	public static Tag outcome(ServerWebExchange exchange) {
 		HttpStatus status = exchange.getResponse().getStatusCode();

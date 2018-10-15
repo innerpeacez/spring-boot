@@ -3,7 +3,7 @@ set -e
 
 source $(dirname $0)/common.sh
 
-milestone=$( cat version/stageVersion )
+milestone=$( cat version/version )
 if [[ $RELEASE_TYPE = "RELEASE" ]]; then
 	milestone=${milestone%.RELEASE}
 fi
@@ -15,7 +15,7 @@ java -jar -Dreleasenotes.github.organization=${GITHUB_ORGANIZATION} -Dreleasenot
 popd > /dev/null
 
 
-body=$( sed -E ':a;N;$!ba;s/\r{0,1}\n/\\n/g' release-notes-repo/release-notes.md )
+body=$( while read line; do echo -n "$line\\n"; done < release-notes-repo/release-notes.md )
 
 curl \
 	-s \

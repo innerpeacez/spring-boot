@@ -1326,6 +1326,9 @@ See the
 {sc-spring-boot-autoconfigure}/web/servlet/MultipartAutoConfiguration.{sc-ext}[`MultipartAutoConfiguration`]
 source for more details.
 
+NOTE: It is recommended to use the container's built-in support for multipart uploads
+rather than introducing an additional dependency such as Apache Commons File Upload.
+
 
 
 [[howto-switch-off-the-spring-mvc-dispatcherservlet]]
@@ -2000,6 +2003,38 @@ for more details.
 
 
 
+[[howto-configure-hibernate-second-level-caching]]
+=== Configure Hibernate Second-Level Caching
+Hibernate {hibernate-documentation}#caching[second-level cache] can be configured for a
+range of cache providers. Rather than configuring Hibernate to lookup the cache provider
+again, it is better to provide the one that is available in the context whenever possible.
+
+If you're using JCache, this is pretty easy. First, make sure that
+`org.hibernate:hibernate-jcache` is available on the classpath. Then, add a
+`HibernatePropertiesCustomizer` bean as shown in the following example:
+
+[source,java,indent=0]
+----
+include::{code-examples}/jpa/HibernateSecondLevelCacheExample.java[tag=configuration]
+----
+
+This customizer will configure Hibernate to use the same `CacheManager` as the one that
+the application uses. It is also possible to use separate `CacheManager` instances, refer
+to {hibernate-documentation}#caching-provider-jcache[the Hibernate user guide].
+
+
+
+[[howto-use-dependency-injection-hibernate-components]]
+=== Use Dependency Injection in Hibernate Components
+By default, Spring Boot registers a `BeanContainer` implementation that uses the
+`BeanFactory` so that converters and entity listeners can use regular dependency
+injection.
+
+You can disable or tune this behaviour by registering a `HibernatePropertiesCustomizer`
+that remove or change the `hibernate.resource.beans.container` property.
+
+
+
 [[howto-use-custom-entity-manager]]
 === Use a Custom EntityManagerFactory
 To take full control of the configuration of the `EntityManagerFactory`, you need to add
@@ -2103,6 +2138,14 @@ The same obstacle and the same features exist for other auto-configured Spring D
 repository types (Elasticsearch, Solr, and others). To work with them, change the names of
 the annotations and flags accordingly.
 
+
+
+[[howto-use-customize-spring-datas-web-support]]
+=== Customize Spring Data's Web Support
+Spring Data provides web support that simplifies the use of Spring Data repositories in a
+web application. Spring Boot provides properties in the `spring.data.web` namespace
+for customizing its configuration. Note that if you are using Spring Data REST, you must
+use the properties in the `spring.data.rest` namespace instead.
 
 
 [[howto-use-exposing-spring-data-repositories-rest-endpoint]]
@@ -2284,11 +2327,13 @@ according to the type of the database (such as `db/migration/mysql` for MySQL). 
 of supported databases is available in
 {sc-spring-boot}/jdbc/DatabaseDriver.{sc-ext}[`DatabaseDriver`].
 
-See the Flyway class from flyway-core for details of available settings such as schemas
-and others. In addition, Spring Boot provides a small set of properties (in
-{sc-spring-boot-autoconfigure}/flyway/FlywayProperties.{sc-ext}[`FlywayProperties`])
-that can be used to disable the migrations or switch off the location checking. Spring
-Boot calls `Flyway.migrate()` to perform the database migration. If you would like
+{sc-spring-boot-autoconfigure}/flyway/FlywayProperties.{sc-ext}[`FlywayProperties`]
+provides most of Flyway's settings and a small set of additional properties that can be
+used to disable the migrations or switch off the location checking. If you need more
+control over the configuration, consider registering a `FlywayConfigurationCustomizer`
+bean.
+
+Spring Boot calls `Flyway.migrate()` to perform the database migration. If you would like
 more control, provide a `@Bean` that implements
 {sc-spring-boot-autoconfigure}/flyway/FlywayMigrationStrategy.{sc-ext}[`FlywayMigrationStrategy`].
 
@@ -2483,11 +2528,11 @@ of how to register handlers in the servlet container.
 === Sanitize sensible values
 Information returned by the `env` and `configprops` endpoints can be somewhat sensitive
 so keys matching a certain pattern are sanitized by default (i.e. their values are
-replaced by `******`).
+replaced by `+******+`).
 
 Spring Boot uses sensible defaults for such keys: for instance, any key ending with the
 word "password", "secret", "key" or "token" is sanitized. It is also possible to use a
-regular expression instead, such as `*credentials.*` to sanitize any key that holds the
+regular expression instead, such as `+*credentials.*+` to sanitize any key that holds the
 word `credentials` as part of the key.
 
 The patterns to use can be customized using the `management.endpoint.env.keys-to-sanitize`

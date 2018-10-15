@@ -34,7 +34,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
@@ -61,6 +60,7 @@ import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.testsupport.rule.OutputCapture;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebApplicationContext;
 import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebServerApplicationContext;
 import org.springframework.boot.web.reactive.context.ReactiveWebApplicationContext;
 import org.springframework.boot.web.reactive.context.StandardReactiveWebEnvironment;
@@ -100,10 +100,13 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.ConfigurableWebEnvironment;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.willThrow;
@@ -131,9 +134,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 public class SpringApplicationTests {
 
 	private String headlessProperty;
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	@Rule
 	public OutputCapture output = new OutputCapture();
@@ -174,23 +174,23 @@ public class SpringApplicationTests {
 
 	@Test
 	public void sourcesMustNotBeNull() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("PrimarySources must not be null");
-		new SpringApplication((Class<?>[]) null).run();
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> new SpringApplication((Class<?>[]) null).run())
+				.withMessageContaining("PrimarySources must not be null");
 	}
 
 	@Test
 	public void sourcesMustNotBeEmpty() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("Sources must not be empty");
-		new SpringApplication().run();
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> new SpringApplication().run())
+				.withMessageContaining("Sources must not be empty");
 	}
 
 	@Test
 	public void sourcesMustBeAccessible() {
-		this.thrown.expect(IllegalStateException.class);
-		this.thrown.expectMessage("Cannot load configuration");
-		new SpringApplication(InaccessibleConfiguration.class).run();
+		assertThatIllegalStateException().isThrownBy(
+				() -> new SpringApplication(InaccessibleConfiguration.class).run())
+				.withMessageContaining("Cannot load configuration");
 	}
 
 	@Test
@@ -319,6 +319,32 @@ public class SpringApplicationTests {
 		application.setApplicationContextClass(StaticApplicationContext.class);
 		this.context = application.run();
 		assertThat(this.context).isInstanceOf(StaticApplicationContext.class);
+	}
+
+	@Test
+	public void specificWebApplicationContextClassDetectWebApplicationType() {
+		SpringApplication application = new SpringApplication(ExampleConfig.class);
+		application
+				.setApplicationContextClass(AnnotationConfigWebApplicationContext.class);
+		assertThat(application.getWebApplicationType())
+				.isEqualTo(WebApplicationType.SERVLET);
+	}
+
+	@Test
+	public void specificReactiveApplicationContextClassDetectReactiveApplicationType() {
+		SpringApplication application = new SpringApplication(ExampleConfig.class);
+		application.setApplicationContextClass(
+				AnnotationConfigReactiveWebApplicationContext.class);
+		assertThat(application.getWebApplicationType())
+				.isEqualTo(WebApplicationType.REACTIVE);
+	}
+
+	@Test
+	public void nonWebNorReactiveApplicationContextClassDetectNoneApplicationType() {
+		SpringApplication application = new SpringApplication(ExampleConfig.class);
+		application.setApplicationContextClass(StaticApplicationContext.class);
+		assertThat(application.getWebApplicationType())
+				.isEqualTo(WebApplicationType.NONE);
 	}
 
 	@Test
@@ -696,16 +722,10 @@ public class SpringApplicationTests {
 		willThrow(failure).given(runner).run(isA(ApplicationArguments.class));
 		application.addInitializers((context) -> context.getBeanFactory()
 				.registerSingleton("runner", runner));
-		this.thrown.expectCause(equalTo(failure));
-		try {
-			application.run();
-		}
-		finally {
-			verify(listener).onApplicationEvent(isA(ApplicationStartedEvent.class));
-			verify(listener).onApplicationEvent(isA(ApplicationFailedEvent.class));
-			verify(listener, never())
-					.onApplicationEvent(isA(ApplicationReadyEvent.class));
-		}
+		assertThatIllegalStateException().isThrownBy(application::run).withCause(failure);
+		verify(listener).onApplicationEvent(isA(ApplicationStartedEvent.class));
+		verify(listener).onApplicationEvent(isA(ApplicationFailedEvent.class));
+		verify(listener, never()).onApplicationEvent(isA(ApplicationReadyEvent.class));
 	}
 
 	@Test
@@ -722,16 +742,10 @@ public class SpringApplicationTests {
 		willThrow(failure).given(runner).run();
 		application.addInitializers((context) -> context.getBeanFactory()
 				.registerSingleton("runner", runner));
-		this.thrown.expectCause(equalTo(failure));
-		try {
-			application.run();
-		}
-		finally {
-			verify(listener).onApplicationEvent(isA(ApplicationStartedEvent.class));
-			verify(listener).onApplicationEvent(isA(ApplicationFailedEvent.class));
-			verify(listener, never())
-					.onApplicationEvent(isA(ApplicationReadyEvent.class));
-		}
+		assertThatIllegalStateException().isThrownBy(application::run).withCause(failure);
+		verify(listener).onApplicationEvent(isA(ApplicationStartedEvent.class));
+		verify(listener).onApplicationEvent(isA(ApplicationFailedEvent.class));
+		verify(listener, never()).onApplicationEvent(isA(ApplicationReadyEvent.class));
 	}
 
 	@Test
@@ -745,15 +759,10 @@ public class SpringApplicationTests {
 		RuntimeException failure = new RuntimeException();
 		willThrow(failure).given(listener)
 				.onApplicationEvent(isA(ApplicationReadyEvent.class));
-		this.thrown.expect(equalTo(failure));
-		try {
-			application.run();
-		}
-		finally {
-			verify(listener).onApplicationEvent(isA(ApplicationReadyEvent.class));
-			verify(listener, never())
-					.onApplicationEvent(isA(ApplicationFailedEvent.class));
-		}
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(application::run)
+				.isEqualTo(failure);
+		verify(listener).onApplicationEvent(isA(ApplicationReadyEvent.class));
+		verify(listener, never()).onApplicationEvent(isA(ApplicationFailedEvent.class));
 	}
 
 	@Test
@@ -1199,8 +1208,9 @@ public class SpringApplicationTests {
 
 	@Test
 	public void beanDefinitionOverridingIsDisabledByDefault() {
-		this.thrown.expect(BeanDefinitionOverrideException.class);
-		new SpringApplication(ExampleConfig.class, OverrideConfig.class).run();
+		assertThatExceptionOfType(BeanDefinitionOverrideException.class).isThrownBy(
+				() -> new SpringApplication(ExampleConfig.class, OverrideConfig.class)
+						.run());
 	}
 
 	@Test

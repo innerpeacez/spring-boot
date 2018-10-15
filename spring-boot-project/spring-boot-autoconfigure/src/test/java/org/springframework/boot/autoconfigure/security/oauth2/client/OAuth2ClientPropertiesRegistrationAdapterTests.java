@@ -23,13 +23,11 @@ import java.util.Map;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties.LoginClientRegistration;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties.Provider;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties.Registration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,6 +38,7 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
  * Tests for {@link OAuth2ClientPropertiesRegistrationAdapter}.
@@ -59,9 +58,6 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 		}
 	}
 
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-
 	@Test
 	public void getClientRegistrationsWhenUsingDefinedProviderShouldAdapt() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
@@ -72,16 +68,16 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 		provider.setUserInfoAuthenticationMethod("form");
 		provider.setUserNameAttribute("sub");
 		provider.setJwkSetUri("http://example.com/jwk");
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setProvider("provider");
-		login.setClientId("clientId");
-		login.setClientSecret("clientSecret");
-		login.setClientAuthenticationMethod("post");
-		login.setAuthorizationGrantType("authorization_code");
-		login.setRedirectUri("http://example.com/redirect");
-		login.setScope(Collections.singleton("scope"));
-		login.setClientName("clientName");
-		properties.getRegistration().getLogin().put("registration", login);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setProvider("provider");
+		registration.setClientId("clientId");
+		registration.setClientSecret("clientSecret");
+		registration.setClientAuthenticationMethod("post");
+		registration.setAuthorizationGrantType("authorization_code");
+		registration.setRedirectUri("http://example.com/redirect");
+		registration.setScope(Collections.singleton("scope"));
+		registration.setClientName("clientName");
+		properties.getRegistration().put("registration", registration);
 		properties.getProvider().put("provider", provider);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
@@ -114,11 +110,11 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 	@Test
 	public void getClientRegistrationsWhenUsingCommonProviderShouldAdapt() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setProvider("google");
-		login.setClientId("clientId");
-		login.setClientSecret("clientSecret");
-		properties.getRegistration().getLogin().put("registration", login);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setProvider("google");
+		registration.setClientId("clientId");
+		registration.setClientSecret("clientSecret");
+		properties.getRegistration().put("registration", registration);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
 		ClientRegistration adapted = registrations.get("registration");
@@ -149,16 +145,16 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 	@Test
 	public void getClientRegistrationsWhenUsingCommonProviderWithOverrideShouldAdapt() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setProvider("google");
-		login.setClientId("clientId");
-		login.setClientSecret("clientSecret");
-		login.setClientAuthenticationMethod("post");
-		login.setAuthorizationGrantType("authorization_code");
-		login.setRedirectUri("http://example.com/redirect");
-		login.setScope(Collections.singleton("scope"));
-		login.setClientName("clientName");
-		properties.getRegistration().getLogin().put("registration", login);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setProvider("google");
+		registration.setClientId("clientId");
+		registration.setClientSecret("clientSecret");
+		registration.setClientAuthenticationMethod("post");
+		registration.setAuthorizationGrantType("authorization_code");
+		registration.setRedirectUri("http://example.com/redirect");
+		registration.setScope(Collections.singleton("scope"));
+		registration.setClientName("clientName");
+		properties.getRegistration().put("registration", registration);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
 		ClientRegistration adapted = registrations.get("registration");
@@ -192,21 +188,22 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 	@Test
 	public void getClientRegistrationsWhenUnknownProviderShouldThrowException() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setProvider("missing");
-		properties.getRegistration().getLogin().put("registration", login);
-		this.thrown.expect(IllegalStateException.class);
-		this.thrown.expectMessage("Unknown provider ID 'missing'");
-		OAuth2ClientPropertiesRegistrationAdapter.getClientRegistrations(properties);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setProvider("missing");
+		properties.getRegistration().put("registration", registration);
+		assertThatIllegalStateException()
+				.isThrownBy(() -> OAuth2ClientPropertiesRegistrationAdapter
+						.getClientRegistrations(properties))
+				.withMessageContaining("Unknown provider ID 'missing'");
 	}
 
 	@Test
 	public void getClientRegistrationsWhenProviderNotSpecifiedShouldUseRegistrationId() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setClientId("clientId");
-		login.setClientSecret("clientSecret");
-		properties.getRegistration().getLogin().put("google", login);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setClientId("clientId");
+		registration.setClientSecret("clientSecret");
+		properties.getRegistration().put("google", registration);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
 		ClientRegistration adapted = registrations.get("google");
@@ -236,56 +233,21 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 	}
 
 	@Test
-	public void getClientRegistrationsWhenAuthorizationCodeClientShouldAdapt() {
-		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.AuthorizationCodeClientRegistration registration = new OAuth2ClientProperties.AuthorizationCodeClientRegistration();
-		registration.setClientId("clientId");
-		registration.setClientSecret("clientSecret");
-		registration.setRedirectUri("http://my-redirect-uri.com");
-		properties.getRegistration().getAuthorizationCode().put("google", registration);
-		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
-				.getClientRegistrations(properties);
-		ClientRegistration adapted = registrations.get("google");
-		ProviderDetails adaptedProvider = adapted.getProviderDetails();
-		assertThat(adaptedProvider.getAuthorizationUri())
-				.isEqualTo("https://accounts.google.com/o/oauth2/v2/auth");
-		assertThat(adaptedProvider.getTokenUri())
-				.isEqualTo("https://www.googleapis.com/oauth2/v4/token");
-		assertThat(adaptedProvider.getUserInfoEndpoint().getUri())
-				.isEqualTo("https://www.googleapis.com/oauth2/v3/userinfo");
-		assertThat(adaptedProvider.getUserInfoEndpoint().getAuthenticationMethod())
-				.isEqualTo(
-						org.springframework.security.oauth2.core.AuthenticationMethod.HEADER);
-		assertThat(adaptedProvider.getJwkSetUri())
-				.isEqualTo("https://www.googleapis.com/oauth2/v3/certs");
-		assertThat(adapted.getRegistrationId()).isEqualTo("google");
-		assertThat(adapted.getClientId()).isEqualTo("clientId");
-		assertThat(adapted.getClientSecret()).isEqualTo("clientSecret");
-		assertThat(adapted.getRedirectUriTemplate())
-				.isEqualTo("http://my-redirect-uri.com");
-		assertThat(adapted.getClientAuthenticationMethod()).isEqualTo(
-				org.springframework.security.oauth2.core.ClientAuthenticationMethod.BASIC);
-		assertThat(adapted.getAuthorizationGrantType()).isEqualTo(
-				org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE);
-		assertThat(adapted.getScopes()).containsExactly("openid", "profile", "email");
-		assertThat(adapted.getClientName()).isEqualTo("Google");
-	}
-
-	@Test
 	public void getClientRegistrationsWhenProviderNotSpecifiedAndUnknownProviderShouldThrowException() {
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		properties.getRegistration().getLogin().put("missing", login);
-		this.thrown.expect(IllegalStateException.class);
-		this.thrown.expectMessage(
-				"Provider ID must be specified for client registration 'missing'");
-		OAuth2ClientPropertiesRegistrationAdapter.getClientRegistrations(properties);
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		properties.getRegistration().put("missing", registration);
+		assertThatIllegalStateException()
+				.isThrownBy(() -> OAuth2ClientPropertiesRegistrationAdapter
+						.getClientRegistrations(properties))
+				.withMessageContaining(
+						"Provider ID must be specified for client registration 'missing'");
 	}
 
 	@Test
 	public void oidcProviderConfigurationWhenProviderNotSpecifiedOnRegistration()
 			throws Exception {
-		LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
+		Registration login = new OAuth2ClientProperties.Registration();
 		login.setClientId("clientId");
 		login.setClientSecret("clientSecret");
 		testOidcConfiguration(login, "okta");
@@ -294,7 +256,7 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 	@Test
 	public void oidcProviderConfigurationWhenProviderSpecifiedOnRegistration()
 			throws Exception {
-		OAuth2ClientProperties.LoginClientRegistration login = new LoginClientRegistration();
+		OAuth2ClientProperties.Registration login = new Registration();
 		login.setProvider("okta-oidc");
 		login.setClientId("clientId");
 		login.setClientSecret("clientSecret");
@@ -309,13 +271,13 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 		String issuer = this.server.url("").toString();
 		String cleanIssuerPath = cleanIssuerPath(issuer);
 		setupMockResponse(cleanIssuerPath);
-		OAuth2ClientProperties.LoginClientRegistration login = new OAuth2ClientProperties.LoginClientRegistration();
-		login.setProvider("okta-oidc");
-		login.setClientId("clientId");
-		login.setClientSecret("clientSecret");
-		login.setClientAuthenticationMethod("post");
-		login.setRedirectUri("http://example.com/redirect");
-		login.setScope(Collections.singleton("user"));
+		OAuth2ClientProperties.Registration registration = new OAuth2ClientProperties.Registration();
+		registration.setProvider("okta-oidc");
+		registration.setClientId("clientId");
+		registration.setClientSecret("clientSecret");
+		registration.setClientAuthenticationMethod("post");
+		registration.setRedirectUri("http://example.com/redirect");
+		registration.setScope(Collections.singleton("user"));
 		Provider provider = new Provider();
 		provider.setIssuerUri(issuer);
 		provider.setAuthorizationUri("http://example.com/auth");
@@ -325,7 +287,7 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 		provider.setJwkSetUri("http://example.com/jwk");
 		OAuth2ClientProperties properties = new OAuth2ClientProperties();
 		properties.getProvider().put("okta-oidc", provider);
-		properties.getRegistration().getLogin().put("okta", login);
+		properties.getRegistration().put("okta", registration);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
 		ClientRegistration adapted = registrations.get("okta");
@@ -349,8 +311,7 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 				.isEqualTo("sub");
 	}
 
-	private void testOidcConfiguration(
-			OAuth2ClientProperties.LoginClientRegistration registration,
+	private void testOidcConfiguration(OAuth2ClientProperties.Registration registration,
 			String providerId) throws Exception {
 		this.server = new MockWebServer();
 		this.server.start();
@@ -361,7 +322,7 @@ public class OAuth2ClientPropertiesRegistrationAdapterTests {
 		Provider provider = new Provider();
 		provider.setIssuerUri(issuer);
 		properties.getProvider().put(providerId, provider);
-		properties.getRegistration().getLogin().put("okta", registration);
+		properties.getRegistration().put("okta", registration);
 		Map<String, ClientRegistration> registrations = OAuth2ClientPropertiesRegistrationAdapter
 				.getClientRegistrations(properties);
 		ClientRegistration adapted = registrations.get("okta");

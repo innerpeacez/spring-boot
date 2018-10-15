@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.boot.actuate.autoconfigure.couchbase;
 
 import org.junit.Test;
 
 import org.springframework.boot.actuate.autoconfigure.health.HealthIndicatorAutoConfiguration;
 import org.springframework.boot.actuate.couchbase.CouchbaseHealthIndicator;
+import org.springframework.boot.actuate.couchbase.CouchbaseReactiveHealthIndicator;
 import org.springframework.boot.actuate.health.ApplicationHealthIndicator;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,14 +40,15 @@ import static org.mockito.Mockito.mock;
 public class CouchbaseHealthIndicatorAutoConfigurationTests {
 
 	private ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-			.withConfiguration(AutoConfigurations.of(CouchbaseConfiguration.class,
-					CouchbaseHealthIndicatorAutoConfiguration.class,
-					HealthIndicatorAutoConfiguration.class));
+			.withUserConfiguration(CouchbaseMockConfiguration.class).withConfiguration(
+					AutoConfigurations.of(CouchbaseHealthIndicatorAutoConfiguration.class,
+							HealthIndicatorAutoConfiguration.class));
 
 	@Test
 	public void runShouldCreateIndicator() {
 		this.contextRunner.run((context) -> assertThat(context)
 				.hasSingleBean(CouchbaseHealthIndicator.class)
+				.doesNotHaveBean(CouchbaseReactiveHealthIndicator.class)
 				.doesNotHaveBean(ApplicationHealthIndicator.class));
 	}
 
@@ -72,8 +72,7 @@ public class CouchbaseHealthIndicatorAutoConfigurationTests {
 	}
 
 	@Configuration
-	@AutoConfigureBefore(CouchbaseHealthIndicatorAutoConfiguration.class)
-	protected static class CouchbaseConfiguration {
+	protected static class CouchbaseMockConfiguration {
 
 		@Bean
 		public CouchbaseOperations couchbaseOperations() {

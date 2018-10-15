@@ -60,6 +60,7 @@ public class CassandraAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
+	@SuppressWarnings("deprecation")
 	public Cluster cassandraCluster() {
 		PropertyMapper map = PropertyMapper.get();
 		CassandraProperties properties = this.properties;
@@ -82,6 +83,8 @@ public class CassandraAutoConfiguration {
 		map.from(properties::getContactPoints)
 				.as((list) -> StringUtils.toStringArray(list))
 				.to(builder::addContactPoints);
+		map.from(properties::isJmxEnabled).whenFalse()
+				.toCall(builder::withoutJMXReporting);
 		customize(builder);
 		return builder.build();
 	}
