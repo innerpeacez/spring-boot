@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2017 the original author or authors.
+ * Copyright 2012-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.boot.autoconfigure.security;
-
 /**
- * Marker interface for beans that need to be initialized before any security
- * configuration is evaluated.
- *
- * @author Dave Syer
+ * Support for exporting actuator metrics to AppOptics.
  */
-public interface SecurityPrerequisite {
-
-}
+package org.springframework.boot.actuate.autoconfigure.metrics.export.appoptics;

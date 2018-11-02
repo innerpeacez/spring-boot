@@ -15,8 +15,7 @@
  */
 package org.springframework.boot.actuate.autoconfigure.couchbase;
 
-import java.time.Duration;
-
+import com.couchbase.client.java.Cluster;
 import org.junit.Test;
 
 import org.springframework.boot.actuate.autoconfigure.health.HealthIndicatorAutoConfiguration;
@@ -27,7 +26,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.couchbase.core.RxJavaCouchbaseOperations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -54,18 +52,6 @@ public class CouchbaseReactiveHealthIndicatorAutoConfigurationTests {
 	}
 
 	@Test
-	public void runWithCustomTimeoutShouldCreateIndicator() {
-		this.contextRunner.withPropertyValues("management.health.couchbase.timeout=2s")
-				.run((context) -> {
-					assertThat(context)
-							.hasSingleBean(CouchbaseReactiveHealthIndicator.class);
-					assertThat(context.getBean(CouchbaseReactiveHealthIndicator.class))
-							.hasFieldOrPropertyWithValue("timeout",
-									Duration.ofSeconds(2));
-				});
-	}
-
-	@Test
 	public void runWhenDisabledShouldNotCreateIndicator() {
 		this.contextRunner.withPropertyValues("management.health.couchbase.enabled:false")
 				.run((context) -> assertThat(context)
@@ -77,8 +63,8 @@ public class CouchbaseReactiveHealthIndicatorAutoConfigurationTests {
 	protected static class CouchbaseMockConfiguration {
 
 		@Bean
-		public RxJavaCouchbaseOperations couchbaseOperations() {
-			return mock(RxJavaCouchbaseOperations.class);
+		public Cluster couchbaseCluster() {
+			return mock(Cluster.class);
 		}
 
 	}

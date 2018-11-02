@@ -2000,7 +2000,7 @@ Jackson is the preferred and default library.
 [[boot-features-json-jackson]]
 === Jackson
 Auto-configuration for Jackson is provided and Jackson is part of
-`spring-boot-starer-json`. When Jackson is on the classpath an `ObjectMapper`
+`spring-boot-starter-json`. When Jackson is on the classpath an `ObjectMapper`
 bean is automatically configured. Several configuration properties are provided for
 <<howto.adoc#howto-customize-the-jackson-objectmapper,customizing the configuration of the
 `ObjectMapper`>>.
@@ -2352,13 +2352,21 @@ suffix pattern matching, the following configuration is required:
 [source,properties,indent=0,subs="verbatim,quotes,attributes"]
 ----
 	spring.mvc.contentnegotiation.favor-path-extension=true
+	spring.mvc.pathmatch.use-suffix-pattern=true
+----
 
-	# You can also restrict that feature to known extensions only
-	# spring.mvc.pathmatch.use-registered-suffix-pattern=true
+Alternatively, rather than open all suffix patterns, it's more secure to just support
+registered suffix patterns:
 
-	# We can also register additional file extensions/media types with:
+[source,properties,indent=0,subs="verbatim,quotes,attributes"]
+----
+	spring.mvc.contentnegotiation.favor-path-extension=true
+	spring.mvc.pathmatch.use-registered-suffix-pattern=true
+
+	# You can also register additional file extensions/media types with:
 	# spring.mvc.contentnegotiation.media-types.adoc=text/asciidoc
 ----
+
 
 
 [[boot-features-spring-mvc-web-binding-initializer]]
@@ -5914,7 +5922,7 @@ The following code shows a typical example:
 
 TIP: `RestTemplateBuilder` includes a number of useful methods that can be used to
 quickly configure a `RestTemplate`. For example, to add BASIC auth support, you can use
-`builder.basicAuthorization("user", "password").build()`.
+`builder.basicAuthentication("user", "password").build()`.
 
 
 

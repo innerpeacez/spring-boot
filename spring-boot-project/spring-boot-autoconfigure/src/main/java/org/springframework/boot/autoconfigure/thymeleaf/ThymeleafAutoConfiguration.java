@@ -50,6 +50,7 @@ import org.springframework.boot.autoconfigure.template.TemplateLocation;
 import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafProperties.Reactive;
 import org.springframework.boot.autoconfigure.web.ConditionalOnEnabledResourceChain;
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.ConditionalOnMissingFilterBean;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -154,6 +155,8 @@ public class ThymeleafAutoConfiguration {
 		public SpringTemplateEngine templateEngine() {
 			SpringTemplateEngine engine = new SpringTemplateEngine();
 			engine.setEnableSpringELCompiler(this.properties.isEnableSpringElCompiler());
+			engine.setRenderHiddenMarkersBeforeCheckboxes(
+					this.properties.isRenderHiddenMarkersBeforeCheckboxes());
 			this.templateResolvers.forEach(engine::addTemplateResolver);
 			this.dialects.orderedStream().forEach(engine::addDialect);
 			return engine;
@@ -167,8 +170,8 @@ public class ThymeleafAutoConfiguration {
 	static class ThymeleafWebMvcConfiguration {
 
 		@Bean
-		@ConditionalOnMissingBean
 		@ConditionalOnEnabledResourceChain
+		@ConditionalOnMissingFilterBean(ResourceUrlEncodingFilter.class)
 		public FilterRegistrationBean<ResourceUrlEncodingFilter> resourceUrlEncodingFilter() {
 			FilterRegistrationBean<ResourceUrlEncodingFilter> registration = new FilterRegistrationBean<>(
 					new ResourceUrlEncodingFilter());
@@ -198,6 +201,8 @@ public class ThymeleafAutoConfiguration {
 				resolver.setContentType(
 						appendCharset(this.properties.getServlet().getContentType(),
 								resolver.getCharacterEncoding()));
+				resolver.setProducePartialOutputWhileProcessing(this.properties
+						.getServlet().isProducePartialOutputWhileProcessing());
 				resolver.setExcludedViewNames(this.properties.getExcludedViewNames());
 				resolver.setViewNames(this.properties.getViewNames());
 				// This resolver acts as a fallback resolver (e.g. like a
@@ -245,6 +250,8 @@ public class ThymeleafAutoConfiguration {
 		public SpringWebFluxTemplateEngine templateEngine() {
 			SpringWebFluxTemplateEngine engine = new SpringWebFluxTemplateEngine();
 			engine.setEnableSpringELCompiler(this.properties.isEnableSpringElCompiler());
+			engine.setRenderHiddenMarkersBeforeCheckboxes(
+					this.properties.isRenderHiddenMarkersBeforeCheckboxes());
 			this.templateResolvers.forEach(engine::addTemplateResolver);
 			this.dialects.orderedStream().forEach(engine::addDialect);
 			return engine;

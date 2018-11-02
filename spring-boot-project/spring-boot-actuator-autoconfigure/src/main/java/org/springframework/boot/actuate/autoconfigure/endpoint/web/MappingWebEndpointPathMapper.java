@@ -21,6 +21,9 @@ import java.util.Map;
 
 import org.springframework.boot.actuate.endpoint.EndpointId;
 import org.springframework.boot.actuate.endpoint.web.PathMapper;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.util.StringUtils;
 
 /**
  * A {@link PathMapper} implementation that uses a simple {@link Map} to determine the
@@ -28,6 +31,7 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
  *
  * @author Stephane Nicoll
  */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 class MappingWebEndpointPathMapper implements PathMapper {
 
 	private final Map<EndpointId, String> pathMapping;
@@ -40,7 +44,8 @@ class MappingWebEndpointPathMapper implements PathMapper {
 
 	@Override
 	public String getRootPath(EndpointId endpointId) {
-		return this.pathMapping.getOrDefault(endpointId, endpointId.toLowerCaseString());
+		String path = this.pathMapping.get(endpointId);
+		return StringUtils.hasText(path) ? path : null;
 	}
 
 }
